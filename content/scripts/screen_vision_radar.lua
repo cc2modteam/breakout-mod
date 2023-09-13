@@ -71,26 +71,25 @@ function update(screen_w, screen_h, ticks)
     end
 end
 
-function do_reset()
+function do_reset(screen_w, screen_h)
     g_breakout.rows = {
         {1,1,1,1,1,1,1,1,1},
         {1,1,1,1,1,1,1,1,1},
+        {1,1,1,1,1,1,1,1,1},
     }
+    g_breakout.ball_y = screen_h
 end
 
 function _update(screen_w, screen_h, ticks)
     -- check reset
     if g_breakout.remaining <= 0 then
-        do_reset()
+        do_reset(screen_w, screen_h)
     end
 
     -- move the ball
     g_breakout.ball_x = g_breakout.ball_x + g_breakout.ball_dx
     g_breakout.ball_y = g_breakout.ball_y + g_breakout.ball_dy
 
-    if g_breakout.ball_y < 0 then
-        g_breakout.ball_y = screen_h
-    end
     if g_breakout.ball_x < 0 or g_breakout.ball_x > screen_w then
         g_breakout.ball_dx = g_breakout.ball_dx * -1
         beep()
@@ -99,7 +98,8 @@ function _update(screen_w, screen_h, ticks)
     end
 
     if g_breakout.ball_y < 1 then
-        g_breakout.ball_dy =  g_breakout.ball_dy * -1
+        g_breakout.ball_y = 1
+        g_breakout.ball_dy = g_breakout.ball_dy * -1
         if g_breakout.ball_dy > 5 then
             g_breakout.ball_dy = 5
         end
