@@ -157,7 +157,11 @@ function _update(screen_w, screen_h, ticks)
             local block = g_breakout.rows[i][j]
             if block == 1 then
                 g_breakout.remaining = g_breakout.remaining + 1
-                update_ui_rectangle(12 * j, g_breakout.row_dy * i, 9, 6, color_white)
+                local r = (i * 137) % 253
+                local g = (j * 45) % 201
+                local b = (j * i * 3) % 255
+                local color = color8(r, g, b, 255)
+                update_ui_rectangle(12 * j, g_breakout.row_dy * i, 9, 6, color)
             end
         end
     end
