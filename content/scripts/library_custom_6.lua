@@ -4,6 +4,7 @@ GameBreakout.__index = AppBase
 setmetatable(GameBreakout, AppBase)
 function GameBreakout.new()
     local self = setmetatable({}, {__index = GameBreakout})
+    self.name = "Breakout"
     self.score = 0
     self.paddle_dx = 0
     self.paddle_x = 0
@@ -84,11 +85,6 @@ function GameBreakout:check_hit_block()
     end
 
     return false
-end
-
-function GameBreakout:draw_explosion(expl, tick)
-    local ex_col = color8(220, 130 + tick % 32, 23 + tick % 38, 96)
-    update_ui_circle(expl.x, expl.y, expl.ttl + (tick % 3), 5 + (tick % 2), ex_col)
 end
 
 function GameBreakout:draw_block(i, j)
@@ -232,3 +228,204 @@ function GameBreakout:update(screen_w, screen_h, ticks)
 end
 
 g_apps["breakout"] = GameBreakout:new()
+
+-- Razor Bird - flappy bird clone
+
+local RBird = {}
+RBird.__index = AppBase
+setmetatable(RBird, AppBase)
+function RBird.new()
+    local self = setmetatable({}, {__index = RBird})
+    self.name = "Razor Bird"
+    self.heli_w = 15
+    self.heli_h = 15
+    self.heli_x = 65
+    self.heli_y = 65
+    self.heli_vy = -1
+    self.gravity = 0.1
+    self.heli_ay = self.gravity
+
+    self.smoke = {}
+    self.explosions = {}
+    self.obstacles = {}
+    self.vx = 2
+    self.distance = 0
+    self.last_score = 0
+    self.smoke_col = color8(32, 32, 49, 18)
+    self.leaves_col = color8(0, 64, 12, 255)
+    self.dark_leaves_col = color8(0, 32, 8, 255)
+    self.ground_h = 22
+
+    self.pause = true
+
+    self.died = function(this)
+        local blast = {x=self.heli_x, y=self.heli_y, ttl=20, ay=0.3, dy=0}
+        table.insert(self.explosions, 1 + #self.explosions, blast)
+        self.pause = true
+        self.last_score = self.distance
+        self.distance = 0
+        self.heli_y = 65
+        self.heli_vy = -1.5
+    end
+
+    self.update = function(this, w, h, t)
+        update_set_screen_background_type(0)
+        local tick = update_get_logic_tick()
+        self.screen_w = w
+        self.screen_h = h
+
+        update_ui_rectangle(0, h - self.ground_h * 3, w, self.ground_h * 3, self.dark_leaves_col)
+        update_ui_rectangle(0, h - self.ground_h, w, self.ground_h, self.leaves_col)
+
+        self.draw_heli(self.heli_x, self.heli_y, tick)
+
+        for i, smoke in pairs(self.smoke) do
+            if smoke then
+                if not self.pause then
+                    smoke.ttl = smoke.ttl - 1
+                end
+                if smoke.ttl < 1 then
+                    table.remove(self.smoke, i)
+                else
+                    smoke.x = smoke.x - self.vx
+                    self:draw_smoke(smoke)
+                end
+            end
+        end
+
+        for i = 1, #self.explosions do
+            local expl = self.explosions[i]
+            if expl then
+                if expl.ttl > 0 then
+                    self:draw_explosion(expl, tick)
+                    if not self.pause then
+                        expl.ttl = expl.ttl - 1
+                    end
+                else
+                    table.remove(self.explosions, i)
+                end
+            end
+        end
+
+       for i = 1, #self.obstacles do
+            local o = self.obstacles[i]
+            if o then
+                if o.x > -1 * o.w then
+                    self:draw_obstacle(o, tick)
+                    if not self.pause then
+                        o.x = o.x - self.vx
+                    end
+                else
+                    table.remove(self.obstacles, i)
+                end
+            end
+        end
+        local score = self.distance
+        if self.pause then
+            score = self.last_score
+        end
+        update_ui_text(25, h - 32, string.format("%dm", score), 48, 0, color_white, 0)
+
+        if self.pause then
+            return
+        end
+
+        self.heli_y = self.heli_y + self.heli_vy
+        self.heli_vy = self.heli_vy + self.heli_ay
+
+        -- check obstacles
+        for i = 1, #self.obstacles do
+            local o = self.obstacles[i]
+            if o then
+                if o.x > self.heli_x and o.x < self.heli_x + self.heli_w then
+                    if self.heli_y > self.screen_h - o.h then
+                        self:died()
+                    end
+                end
+            end
+        end
+
+        -- check ground
+        if self.heli_y > h - 10 then
+            -- hit ground
+            self:died()
+        elseif self.heli_y < 10 then
+            self.heli_y = 10
+            self.heli_vy = self.heli_vy * 0.9
+        end
+        self.distance = self.distance + self.vx
+
+        if self.distance % 65 == 0 then
+            if math.random(0, 4) > 1 then
+                -- add an obstacle
+                local o = {x=w + 2,
+                           w=math.random(24, 48),
+                           h=math.random(30, math.floor(h * 0.65))}
+                table.insert(self.obstacles, o)
+            end
+        end
+
+        if self.heli_ay < 0 then
+            -- engine on, add a smoke
+            table.insert(self.smoke, {y=self.heli_y + 6, x=self.heli_x, ttl=20, n=math.random(3, 5)})
+        end
+
+    end
+
+    self.draw_smoke = function(this, smoke)
+        update_ui_circle(smoke.x, smoke.y, 4, smoke.n, self.smoke_col)
+    end
+
+    self.draw_obstacle = function(this, o)
+        update_ui_rectangle(o.x, self.screen_h - o.h, o.w, o.h, color_grey_mid)
+    end
+
+    self.draw_heli = function(hx, hy, tick)
+        local x = hx - self.heli_w / 2
+        local y = hy - self.heli_h / 2
+        local rotor_w = 18
+        local rotor_y = y
+        update_ui_rectangle(x, y + 3, self.heli_w, 2, color_grey_mid)
+        update_ui_rectangle(x + 6, y + 2, 8, 7, color_white)
+        update_ui_rectangle(x -1, y, 1, 7, color_grey_mid)
+        update_ui_rectangle(x + 7, y + 4, 4, 4, color_grey_mid)
+        update_ui_line(x + 5, y + 11, x + 13, y + 11, color_grey_mid)  -- skis
+        update_ui_line(1 + x + rotor_w / 2, y, 1 + x + rotor_w / 2, y + 2, color_grey_dark)
+        -- rotor blade
+
+        if tick % 2 == 0 then
+            rotor_y = rotor_y - 1
+        end
+
+        update_ui_line(x + 1, rotor_y, x + rotor_w, rotor_y, color_white)
+    end
+
+    self.input_event = function(this, event, action)
+        if action == e_input_action.press then
+            if event == e_input.back then
+                update_set_screen_state_exit()
+            else
+                self.pause = false
+                self.heli_ay = -0.2
+                if self.heli_vy < -1 then
+                    self.heli_vy = -1
+                elseif self.heli_vy > 1 then
+                    self.heli_vy = 1
+                end
+
+            end
+        elseif action == e_input_action.release then
+            if event ~= e_input.back then
+                self.heli_ay = self.gravity
+            end
+        end
+    end
+
+    return self
+end
+
+
+
+
+
+g_apps["razorbird"] = RBird:new()

@@ -17,6 +17,7 @@ App.__index = App
 AppBase = App
 function App.new()
     local self = setmetatable({}, App)
+    self.name = ""
     self.screen_w = 320
     self.screen_h = 240
     self.update_func = nil
@@ -60,6 +61,11 @@ function App:input_scroll(dy)
     end
 end
 
+function App:draw_explosion(expl, tick)
+    local ex_col = color8(220, 130 + tick % 32, 23 + tick % 38, 96)
+    update_ui_circle(expl.x, expl.y, expl.ttl + (tick % 3), 5 + (tick % 2), ex_col)
+end
+
 -- game selector
 local Selector = {}
 Selector.__index = AppBase
@@ -76,11 +82,13 @@ function Selector:update(w, h, t)
     self.ui:begin_ui()
     self.ui:begin_window("Select App", 10, 10, w - 20, h - 20, nil, true, 0, true, true)
     self.ui:header("Apps")
-    if self.ui:button("Vehicle Control", true, 1) then
-        g_current_app = "control_screen"
-    end
-    if self.ui:button("Breakout", true, 1) then
-        g_current_app = "breakout"
+
+    for k, app in pairs(g_apps) do
+        if app.name then
+            if self.ui:button(app.name, true, 1) then
+                g_current_app = k
+            end
+        end
     end
 
     self.ui:end_window()
@@ -144,6 +152,7 @@ function wrapped_update(screen_w, screen_h, ticks)
     if g_apps["selector"] == nil then
         g_apps["selector"] = Selector:new()
         g_apps["control_screen"] = App:new()
+        g_apps["control_screen"].name = "Vehicle Control"
         g_apps["control_screen"].update_func = default_update
         g_apps["control_screen"].input_scroll_func = default_input_scroll
         g_apps["control_screen"].input_event_func = default_input_event
