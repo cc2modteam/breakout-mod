@@ -91,6 +91,19 @@ function GameBreakout:draw_explosion(expl, tick)
     update_ui_circle(expl.x, expl.y, expl.ttl + (tick % 3), 5 + (tick % 2), ex_col)
 end
 
+function GameBreakout:draw_block(i, j)
+    local r = (i * 137) % 253
+    local g = (j * 45) % 201
+    local b = (j * i * 3) % 255
+    local color = color8(r, g, b, 255)
+    local x = (self.col_dx + self.block_w) * j - self.block_w / 2
+    local y = (self.row_dy + self.block_h) * i
+    update_ui_rectangle(x, y, self.block_w, self.block_h, color)
+    color = color8(r, g, b, 128)
+    update_ui_line(x + 1, y + self.block_h, x + self.block_w -1, y + self.block_h, color)
+    update_ui_line(x + 2, 1 + y + self.block_h, x + self.block_w -2, 1 + y + self.block_h, color)
+end
+
 function GameBreakout:update(screen_w, screen_h, ticks)
     -- check reset
     self.screen_w = screen_w - self.mx * 2
@@ -196,13 +209,7 @@ function GameBreakout:update(screen_w, screen_h, ticks)
             local block = self.rows[i][j]
             if block == 1 then
                 self.remaining = self.remaining + 1
-                local r = (i * 137) % 253
-                local g = (j * 45) % 201
-                local b = (j * i * 3) % 255
-                local color = color8(r, g, b, 255)
-                update_ui_rectangle(
-                        (self.col_dx + self.block_w) * j - self.block_w / 2,
-                        (self.row_dy + self.block_h) * i, self.block_w, self.block_h, color)
+                self:draw_block(i, j)
             end
         end
     end
