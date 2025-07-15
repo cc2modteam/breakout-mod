@@ -104,6 +104,12 @@ function GameBreakout:update(screen_w, screen_h, ticks)
     self.ball_x = self.ball_x + self.ball_dx
     self.ball_y = self.ball_y + self.ball_dy
 
+    if self.ball_dy > 0 then
+        if self.ball_dy < 1 then
+            self.ball_dy = 1
+        end
+    end
+
     if self.ball_x < 0 or self.ball_x > screen_w - self.mx * 2 then
         self.ball_dx = self.ball_dx * -1
         beep()
@@ -112,6 +118,7 @@ function GameBreakout:update(screen_w, screen_h, ticks)
     end
 
     if self.ball_y < 1 then
+        self.ball_dx = self.ball_dx + math.random(0, 1)
         self.ball_y = 1
         self.ball_dy = self.ball_dy * -0.9
         self.ball_dx = self.ball_dx * 0.9

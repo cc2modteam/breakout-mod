@@ -33,6 +33,8 @@ function App:update(screen_w, screen_h, t)
         self.update_func(self.screen_w, self.screen_h, t)
     end
 end
+function App:reset()
+end
 
 function App:input_event(a, b)
     if self.input_event_func then
@@ -133,6 +135,7 @@ function wrapped_update(screen_w, screen_h, ticks)
     if g_is_on ~= g_last_power then
         g_last_power = g_is_on
         if g_is_on then
+            g_apps[g_current_app]:reset()
             -- powered off and back on
             g_current_app = "selector"
         end
