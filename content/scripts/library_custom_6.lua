@@ -11,12 +11,13 @@ function GameBreakout.new()
     self.ball_y = 0
     self.ball_x = 0
     self.ball_dy = 3
-    self.ball_dx = 1
+    self.ball_dx = -2 + math.random(0, 2)
     self.row_dy = 8
     self.col_dx = 4
     self.block_h = 8
     self.block_w = 16
     self.rows = {}
+    self.explosions = {}
     self.remaining = -1
     -- margins
     self.mx = 10
@@ -45,10 +46,11 @@ end
 
 function GameBreakout:reset()
     self.rows = {
-        {1,1,1,1,1,1,1,1,1},
-        {1,1,1,1,1,1,1,1,1},
-        {1,1,1,1,1,1,1,1,1},
+        {1,1,1,1,1,1,1,1,1,1,1},
+        {1,1,1,1,1,1,1,1,1,1,1},
+        {1,1,1,1,1,1,1,1,1,1,1},
     }
+    self.explosions = {}
     self.remaining = -1
     self.ball_y = self.screen_h
 end
@@ -82,6 +84,10 @@ function GameBreakout:check_hit_block()
     return false
 end
 
+function GameBreakout:draw_explosion(x, y, ttl)
+
+end
+
 function GameBreakout:update(screen_w, screen_h, ticks)
     -- check reset
     self.screen_w = screen_w - self.mx * 2
@@ -107,7 +113,8 @@ function GameBreakout:update(screen_w, screen_h, ticks)
 
     if self.ball_y < 1 then
         self.ball_y = 1
-        self.ball_dy = self.ball_dy * -1
+        self.ball_dy = self.ball_dy * -0.9
+        self.ball_dx = self.ball_dx * 0.9
         if self.ball_dy > 5 then
             self.ball_dy = 5
         end
@@ -116,6 +123,7 @@ function GameBreakout:update(screen_w, screen_h, ticks)
 
     if self.ball_y > (screen_h + 10) then
         self.ball_dy = self.ball_dy * -1
+        self.ball_dx = self.ball_dx * 0.8
     end
     self.paddle_y = math.floor(screen_h * 0.8)
 
@@ -136,10 +144,14 @@ function GameBreakout:update(screen_w, screen_h, ticks)
             end
         end
     end
+    local tick = update_get_logic_tick()
 
     if self:check_hit_block() then
         beep2()
         self.ball_dy = self.ball_dy * -1
+        self.ball_dx = self.ball_dx - 2 + tick % 2
+        local blast = {x=self.ball_x, y=self.ball_y, ttl=20, ay=0.3, dy=0}
+        table.insert(self.explosions, 1 + #self.explosions, blast)
     end
 
     -- move paddle
@@ -171,6 +183,23 @@ function GameBreakout:update(screen_w, screen_h, ticks)
                 update_ui_rectangle(
                         (self.col_dx + self.block_w) * j - self.block_w / 2,
                         (self.row_dy + self.block_h) * i, self.block_w, self.block_h, color)
+            end
+        end
+    end
+
+    -- draw explosions
+
+    for i = 1, #self.explosions do
+        local expl = self.explosions[i]
+        if expl then
+            if expl.ttl > 0 then
+                local ex_col = color8(220, 130 + tick % 32, 23 + tick % 38, 96)
+                update_ui_circle(expl.x, expl.y, expl.ttl + (tick % 3), 5 + (tick % 2), ex_col)
+                expl.ttl = expl.ttl - 1
+                expl.dy = expl.dy + expl.ay
+                expl.y = expl.y + expl.dy
+            else
+                table.remove(self.explosions, i)
             end
         end
     end
