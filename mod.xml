@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<data name="Breakout" author="Bredroll" description="
+<data name="CC64" author="Bredroll" description="
 
-One of the crew has installed Breakout on the Radar console!
+Install games into the bridge screens.
+
+Toggle the power button on/off to reboot a screen and select a ROM to play!
 
 "/>
