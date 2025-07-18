@@ -254,8 +254,10 @@ function RBird.new()
     self.smoke_col = color8(32, 32, 49, 18)
     self.leaves_col = color8(0, 64, 12, 255)
     self.dark_leaves_col = color8(0, 32, 8, 255)
+    self.darker_green = color8(0, 8, 0, 255)
+    self.brown = color8(32, 32, 0, 255)
     self.ground_h = 22
-
+    self.objects = {}
     self.pause = true
 
     self.died = function(this)
@@ -266,6 +268,36 @@ function RBird.new()
         self.distance = 0
         self.heli_y = 65
         self.heli_vy = -1.5
+
+    end
+
+    self.add_object = function(this, x, y, z, type, value)
+        table.insert(self.objects, {x=x, y=y, z=z, type=type, value=value})
+    end
+
+    self.draw_objects = function(this)
+        for i, o in pairs(self.objects) do
+            if o then
+                if o.type == "tree" then
+                    local w = o.value.w
+                    local s = o.value.s
+                    update_ui_line(o.x, o.y, o.x, o.y - 4 + o.z , self.brown)
+                    update_ui_circle(o.x, o.y - 7 + o.z, w, s, self.leaves_col)
+                end
+            end
+        end
+    end
+
+    self.update_objects = function(this)
+        for i, o in pairs(self.objects) do
+            if o then
+                local v = self.vx - o.z
+                o.x = o.x - v
+                if o.x < -10 then
+                    table.remove(self.objects, i)
+                end
+            end
+        end
     end
 
     self.update = function(this, w, h, t)
@@ -274,9 +306,11 @@ function RBird.new()
         self.screen_w = w
         self.screen_h = h
 
+        update_ui_rectangle(0, 0, w, 80, color_grey_dark)
+        update_ui_rectangle(0, h - self.ground_h * 4, w, self.ground_h * 4, self.darker_green)
         update_ui_rectangle(0, h - self.ground_h * 3, w, self.ground_h * 3, self.dark_leaves_col)
         update_ui_rectangle(0, h - self.ground_h, w, self.ground_h, self.leaves_col)
-
+        self.draw_objects()
         self.draw_heli(self.heli_x, self.heli_y, tick)
 
         for i, smoke in pairs(self.smoke) do
@@ -365,10 +399,33 @@ function RBird.new()
             end
         end
 
+        if tick % 4 == 0 then
+            -- add a smoke every 4 ticks
+            table.insert(self.smoke, {y=self.heli_y + 6, x=self.heli_x, ttl=20, n=math.random(3, 5)})
+        end
+
         if self.heli_ay < 0 then
             -- engine on, add a smoke
             table.insert(self.smoke, {y=self.heli_y + 6, x=self.heli_x, ttl=20, n=math.random(3, 5)})
         end
+
+        if tick % 30 == 0 then
+            if math.random(1, 4) == 3 then
+                -- add a vfar tree
+                self:add_object(w + 2, h - 60, 1.3,"tree" , {w=math.random(2, 3), s=math.random(5,6)})
+            end
+
+            if math.random(1, 4) == 3 then
+                -- add a far tree
+                self:add_object(w + 2, h - 50, 1,"tree" , {w=math.random(3, 4), s=math.random(5,6)})
+            end
+            if math.random(1, 5) == 3 then
+                -- add a near tree
+                self:add_object(w + 2, h - 20, 0,"tree" , {w=math.random(4, 7), s=math.random(5,6)})
+            end
+        end
+
+        self:update_objects()
 
     end
 
