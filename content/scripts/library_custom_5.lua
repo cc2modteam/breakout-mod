@@ -20,9 +20,53 @@ function extend(baseclass, subclass)
     return subclass
 end
 
+function class()
+    local tab = {}
+    tab.__index = tab
+    return tab
+end
+
+-- small utility object that can move around the screen
+Moveable = class()
+function Moveable:new(value)
+    value = value or {}
+    local self = setmetatable({
+        x = 0,
+        y = 0,
+        z = 0,
+        ttl = 0,
+        vx = 0,
+        vy = 0,
+        vz = 0,
+        ax = 0,
+        ay = 0,
+        az = 0,
+        value = {},
+        type = "Moveable",
+    }, {__index = Moveable})
+    for a, b in pairs(value) do
+        self[a] = b
+    end
+
+    self.move = function(self)
+        self.x = self.x + self.vx
+        self.y = self.y + self.vy
+        self.z = self.z + self.vz
+        self.vx = self.vx + self.ax
+        self.vy = self.vy + self.ay
+        self.vz = self.vz + self.az
+        if self.ttl > 0 then
+            self.ttl = self.ttl - 1
+        end
+    end
+
+    return self
+end
+
+
+
 -- base class for game app
-local App = {}
-App.__index = App
+App = class()
 AppBase = App
 function App:new()
     local self = setmetatable({}, {__index = App})
@@ -45,6 +89,17 @@ function App:update(screen_w, screen_h, t)
     end
 end
 function App:reset()
+end
+
+function App:update_moveables(tab, func)
+    for i, item in pairs(tab) do
+        if item then
+            item:move()
+            if func then
+                func(i, item)
+            end
+        end
+    end
 end
 
 function App:input_event(a, b)

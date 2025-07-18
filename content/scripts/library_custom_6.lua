@@ -1,3 +1,4 @@
+
 -- Breakout game
 local GameBreakout = extend(AppBase)
 function GameBreakout:new()
@@ -23,6 +24,9 @@ function GameBreakout:new()
     self.mx = 10
     self.my = 10
     self:reset()
+
+    self.demo_bg = {}
+
     return self
 end
 
@@ -271,7 +275,7 @@ function RBird:new()
     end
 
     self.add_object = function(self, x, y, z, type, value)
-        table.insert(self.objects, {x=x, y=y, z=z, type=type, value=value})
+        table.insert(self.objects, Moveable:new({x=x, y=y, z=z, vx=-1 * (self.vx - z), type=type, value=value}))
     end
 
     self.draw_objects = function(self)
@@ -282,18 +286,6 @@ function RBird:new()
                     local s = o.value.s
                     update_ui_line(o.x, o.y, o.x, o.y - 4 + o.z , self.brown)
                     update_ui_circle(o.x, o.y - 7 + o.z, w, s, self.leaves_col)
-                end
-            end
-        end
-    end
-
-    self.update_objects = function(self)
-        for i, o in pairs(self.objects) do
-            if o then
-                local v = self.vx - o.z
-                o.x = o.x - v
-                if o.x < -10 then
-                    table.remove(self.objects, i)
                 end
             end
         end
@@ -310,20 +302,13 @@ function RBird:new()
         update_ui_rectangle(0, h - self.ground_h, w, self.ground_h, self.leaves_col)
         self:draw_objects()
         self:draw_heli(self.heli_x, self.heli_y, tick)
-
-        for i, smoke in pairs(self.smoke) do
-            if smoke then
-                if not self.pause then
-                    smoke.ttl = smoke.ttl - 1
-                end
-                if smoke.ttl < 1 then
-                    table.remove(self.smoke, i)
-                else
-                    smoke.x = smoke.x - self.vx
-                    self:draw_smoke(smoke)
-                end
+        self:update_moveables(self.smoke, function(i, smk)
+            if smk.ttl < 1 then
+                table.remove(self.smoke, i)
+            else
+                self:draw_smoke(smk)
             end
-        end
+        end)
 
         for i = 1, #self.explosions do
             local expl = self.explosions[i]
@@ -404,12 +389,23 @@ function RBird:new()
 
         if tick % 4 == 0 then
             -- add a smoke every 4 ticks
-            table.insert(self.smoke, {y=self.heli_y + 6, x=self.heli_x, ttl=20, n=math.random(3, 5)})
+            table.insert(self.smoke,
+                    Moveable:new({
+                        y=self.heli_y + 6,
+                        x=self.heli_x,
+                        vx=self.vx * -1,
+                        ttl=20, n=math.random(3, 5)}))
         end
+
 
         if self.heli_ay < 0 then
             -- engine on, add a smoke
-            table.insert(self.smoke, {y=self.heli_y + 6, x=self.heli_x, ttl=20, n=math.random(3, 5)})
+            table.insert(self.smoke,
+                    Moveable:new({
+                        y=self.heli_y + 6,
+                        x=self.heli_x,
+                        vx=self.vx * -1,
+                        ttl=20, n=math.random(3, 5)}))
         end
 
         if tick % 30 == 0 then
@@ -428,7 +424,12 @@ function RBird:new()
             end
         end
 
-        self:update_objects()
+        self:update_moveables(self.objects, function(i, obj)
+            if obj and obj.x < 10 then
+                table.remove(self.objects, i)
+                print("removed")
+            end
+        end)
 
     end
 
@@ -502,8 +503,12 @@ function Sounds:new()
         self.ui:header(self.name)
 
         for name, enum in pairs(e_audio_effect_type) do
-            if self.ui:button(name, true, 1) then
-                update_play_sound(enum)
+            for _, word in pairs({"count", "button", "ui", "telemetry", "door"}) do
+                if string.match(name, word) then
+                    if self.ui:button(name, true, 1) then
+                        update_play_sound(enum)
+                    end
+                end
             end
         end
 
