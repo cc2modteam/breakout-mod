@@ -1,8 +1,6 @@
 -- Breakout game
-local GameBreakout = {}
-GameBreakout.__index = AppBase
-setmetatable(GameBreakout, AppBase)
-function GameBreakout.new()
+local GameBreakout = extend(AppBase)
+function GameBreakout:new()
     local self = setmetatable({}, {__index = GameBreakout})
     self.name = "Breakout"
     self.score = 0
@@ -13,7 +11,7 @@ function GameBreakout.new()
     self.ball_y = 0
     self.ball_x = 0
     self.ball_dy = 3
-    self.ball_dx = -2 + math.random(0, 2)
+    self.ball_dx = -2 + math.random(1, 4)
     self.row_dy = 8
     self.col_dx = 4
     self.block_h = 8
@@ -150,6 +148,7 @@ function GameBreakout:update(screen_w, screen_h, ticks)
         self.ball_dy = self.ball_dy * -1
         self.ball_dx = self.ball_dx * 0.8
         self.score = self.score - 25
+        update_play_sound(e_audio_effect_type.count)
     end
     self.paddle_y = math.floor(screen_h * 0.8)
 
@@ -231,11 +230,11 @@ g_apps["breakout"] = GameBreakout:new()
 
 -- Razor Bird - flappy bird clone
 
-local RBird = {}
-RBird.__index = AppBase
-setmetatable(RBird, AppBase)
-function RBird.new()
+local RBird = extend(AppBase)
+
+function RBird:new()
     local self = setmetatable({}, {__index = RBird})
+
     self.name = "Razor Bird"
     self.heli_w = 15
     self.heli_h = 15
@@ -260,7 +259,7 @@ function RBird.new()
     self.objects = {}
     self.pause = true
 
-    self.died = function(this)
+    self.died = function(self)
         local blast = {x=self.heli_x, y=self.heli_y, ttl=20, ay=0.3, dy=0}
         table.insert(self.explosions, 1 + #self.explosions, blast)
         self.pause = true
@@ -268,14 +267,14 @@ function RBird.new()
         self.distance = 0
         self.heli_y = 65
         self.heli_vy = -1.5
-
+        update_play_sound(e_audio_effect_type.robotics_rotate_end)
     end
 
-    self.add_object = function(this, x, y, z, type, value)
+    self.add_object = function(self, x, y, z, type, value)
         table.insert(self.objects, {x=x, y=y, z=z, type=type, value=value})
     end
 
-    self.draw_objects = function(this)
+    self.draw_objects = function(self)
         for i, o in pairs(self.objects) do
             if o then
                 if o.type == "tree" then
@@ -288,7 +287,7 @@ function RBird.new()
         end
     end
 
-    self.update_objects = function(this)
+    self.update_objects = function(self)
         for i, o in pairs(self.objects) do
             if o then
                 local v = self.vx - o.z
@@ -300,18 +299,17 @@ function RBird.new()
         end
     end
 
-    self.update = function(this, w, h, t)
+    self.update = function(self, w, h, t)
         update_set_screen_background_type(0)
         local tick = update_get_logic_tick()
         self.screen_w = w
         self.screen_h = h
-
         update_ui_rectangle(0, 0, w, 80, color_grey_dark)
         update_ui_rectangle(0, h - self.ground_h * 4, w, self.ground_h * 4, self.darker_green)
         update_ui_rectangle(0, h - self.ground_h * 3, w, self.ground_h * 3, self.dark_leaves_col)
         update_ui_rectangle(0, h - self.ground_h, w, self.ground_h, self.leaves_col)
-        self.draw_objects()
-        self.draw_heli(self.heli_x, self.heli_y, tick)
+        self:draw_objects()
+        self:draw_heli(self.heli_x, self.heli_y, tick)
 
         for i, smoke in pairs(self.smoke) do
             if smoke then
@@ -362,6 +360,11 @@ function RBird.new()
 
         if self.pause then
             return
+        end
+
+        if tick % 2 == 0 then
+            -- rotor sound
+            update_play_sound(e_audio_effect_type.button_metal_2)
         end
 
         self.heli_y = self.heli_y + self.heli_vy
@@ -429,7 +432,7 @@ function RBird.new()
 
     end
 
-    self.draw_smoke = function(this, smoke)
+    self.draw_smoke = function(self, smoke)
         update_ui_circle(smoke.x, smoke.y, 4, smoke.n, self.smoke_col)
     end
 
@@ -437,7 +440,7 @@ function RBird.new()
         update_ui_rectangle(o.x, self.screen_h - o.h, o.w, o.h, color_grey_mid)
     end
 
-    self.draw_heli = function(hx, hy, tick)
+    self.draw_heli = function(self, hx, hy, tick)
         local x = hx - self.heli_w / 2
         local y = hy - self.heli_h / 2
         local rotor_w = 18
@@ -481,8 +484,46 @@ function RBird.new()
     return self
 end
 
-
-
-
-
 g_apps["razorbird"] = RBird:new()
+
+-- sound board
+
+local Sounds = extend(Selector)
+function Sounds:new()
+    local self = setmetatable({}, {__index = Sounds})
+    self.name = "Soundboard"
+    self.ui = lib_imgui:create_ui()
+
+    self.update = function(this, w, h, t)
+        self.screen_w = w
+        self.screen_h = h
+        self.ui:begin_ui()
+        self.ui:begin_window("Play Sounds", 10, 10, w - 20, h - 20, nil, true, 0, true, true)
+        self.ui:header(self.name)
+
+        for name, enum in pairs(e_audio_effect_type) do
+            if self.ui:button(name, true, 1) then
+                update_play_sound(enum)
+            end
+        end
+
+        self.ui:end_window()
+        self.ui:end_ui()
+    end
+
+    self.input_event = function(this, e, a)
+        self.ui:input_event(e, a)
+    end
+
+    self.input_pointer = function(this, h, x, y)
+        self.ui:input_pointer(h, x, y)
+    end
+
+    self.input_scroll = function(this, dy)
+        self.ui:input_scroll(dy)
+    end
+
+    return self
+end
+
+g_apps["soundboard"] = Sounds:new()

@@ -11,12 +11,21 @@ function beep2()
     update_play_sound(7)
 end
 
+-- class helpers
+function extend(baseclass, subclass)
+    subclass = subclass or {}
+    for k, v in pairs(baseclass) do subclass[k] = v end
+    subclass.__index = baseclass
+    setmetatable(subclass, baseclass)
+    return subclass
+end
+
 -- base class for game app
 local App = {}
 App.__index = App
 AppBase = App
-function App.new()
-    local self = setmetatable({}, App)
+function App:new()
+    local self = setmetatable({}, {__index = App})
     self.name = ""
     self.screen_w = 320
     self.screen_h = 240
@@ -25,6 +34,7 @@ function App.new()
     self.input_event_func = nil
     self.input_scroll_func = nil
     self.input_pointer_func = nil
+
     return self
 end
 function App:update(screen_w, screen_h, t)
@@ -66,11 +76,11 @@ function App:draw_explosion(expl, tick)
     update_ui_circle(expl.x, expl.y, expl.ttl + (tick % 3), 5 + (tick % 2), ex_col)
 end
 
+
 -- game selector
-local Selector = {}
-Selector.__index = AppBase
-setmetatable(Selector, AppBase)
-function Selector.new()
+Selector = extend(AppBase)
+
+function Selector:new()
     local self = setmetatable({}, {__index = Selector})
     self.ui = lib_imgui:create_ui()
     return self
@@ -129,6 +139,7 @@ function game_begin()
         update = wrapped_update
         input_event = wrapped_input_event
         input_pointer = wrapped_input_pointer
+        input_scroll = wrapped_input_scroll
     end
 end
 
