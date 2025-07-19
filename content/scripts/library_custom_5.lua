@@ -94,10 +94,10 @@ end
 function App:update_moveables(tab, func)
     for i, item in pairs(tab) do
         if item then
-            item:move()
             if func then
                 func(i, item)
             end
+            item:move()
         end
     end
 end

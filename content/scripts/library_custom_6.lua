@@ -24,8 +24,114 @@ function GameBreakout:new()
     self.mx = 10
     self.my = 10
     self:reset()
+    self.demo_started = false
+    self.demo_objects = {}
 
-    self.demo_bg = {}
+    self.start_demo = function(self)
+        --- flying snake word
+        local col = color8(255, 240, 10, 48)
+        table.insert(self.demo_objects,
+                Moveable:new({
+                    x = 200,
+                    y = 10,
+                    vx = -1.7,
+                    vy = 1.8,
+                    value={
+                        arrived=false,
+                        snake=true,
+                        text="Carrier Command 2",
+                        color=col,
+                    }})
+        )
+
+        -- flying letters
+        local word = "Breakout!"
+        for i = 0, #word do
+            local c = word:sub(i,i)
+            if c ~= " " then
+                local col = color8((32 + i * 41) % 255, (200 + i * 12) % 255, ( 254 + 8 * i) % 255, 64)
+                table.insert(self.demo_objects,
+                        Moveable:new({
+                            x = 300 + 6 * i,
+                            y = 100,
+                            vx = -0.8,
+                            vy = 0.5,
+                            value={
+                                arrived=false,
+                                text=c,
+                                color=col,
+                            }})
+                )
+            end
+        end
+        self.demo_started = true
+    end
+
+    self.update_demo = function(self, tick)
+        self:update_moveables(self.demo_objects,
+                function(i, obj)
+                    -- do bounces
+
+                    if obj.vx < 0 then
+                        if obj.x < -20 then
+                            obj.vx = -1 * obj.vx
+                        end
+                    elseif obj.vx > 0 then
+                        if obj.x > self.screen_w + 20 then
+                            obj.vx = -1 * obj.vx
+                        end
+                    end
+                    if obj.vy < 0 then
+                        if obj.y < -20 then
+                            obj.vy = -1 * obj.vy
+                        end
+                    elseif obj.vy > 0 then
+                        if obj.y > self.screen_h + 20 then
+                            obj.vy = -1 * obj.vy
+                        end
+                    end
+
+
+
+                    local q = 5 - (tick % 10)
+                    obj.vy = obj.vy + math.sin(q / 50)
+                    local j = 4 - (obj.y % 8)
+                    obj.vx = obj.vx + 1 - math.cos(j / 400)
+
+                    if obj.value.snake then
+                        -- remember a short position history
+                        if obj.value.prev == nil then
+                            obj.value.prev = {}
+                        end
+                        obj.value.prev[tick] ={x=obj.x, y=obj.y}
+                        obj.value.prev[tick - 10 * (#obj.value.text - 1)] = nil
+                    end
+
+                end
+        )
+        for _, obj in pairs(self.demo_objects) do
+            if obj then
+                local word = obj.value.text
+                if word then
+                    if obj.value.snake then
+                        for i = 0, #word do
+                            local c = word:sub(i,i)
+                            if c ~= " " then
+                                local prev = obj.value.prev[tick - i * 3]
+                                if prev then
+                                    if prev ~= nil then
+                                        update_ui_text(prev.x, prev.y, c, 8, 0, obj.value.color, 0)
+                                    end
+                                end
+                            end
+                        end
+                    else
+                        update_ui_text(obj.x, obj.y, word, 8 * #word, 0, obj.value.color, 0)
+                    end
+                end
+            end
+        end
+    end
 
     return self
 end
@@ -104,8 +210,16 @@ end
 
 function GameBreakout:update(screen_w, screen_h, ticks)
     -- check reset
+    local tick = update_get_logic_tick()
+    math.randomseed(tick)
+
     self.screen_w = screen_w - self.mx * 2
     self.screen_h = screen_h - self.my * 2
+    if not self.demo_started then
+        self:start_demo()
+    end
+    self:update_demo(tick)
+
     if self.remaining <= 0 then
         score = self.score
         self:reset()
@@ -174,8 +288,6 @@ function GameBreakout:update(screen_w, screen_h, ticks)
             end
         end
     end
-    local tick = update_get_logic_tick()
-    math.randomseed(tick)
 
     if self:check_hit_block() then
         beep2()
@@ -427,7 +539,6 @@ function RBird:new()
         self:update_moveables(self.objects, function(i, obj)
             if obj and obj.x < 10 then
                 table.remove(self.objects, i)
-                print("removed")
             end
         end)
 
