@@ -75,17 +75,17 @@ function GameBreakout:new()
             update_play_sound(e_audio_effect_type.telemetry_4)
         end
         -- after first few sec
-        if tick - self.demo_started > 300 then
-            -- double tap every 2 sec
-            if tick % 60 == 0 then
+        if tick - self.demo_started > 60 then
+            -- warble tap every 1 sec
+            if tick % 30 == 0 then
                 update_play_sound(e_audio_effect_type.telemetry_6)
             end
             -- ping every 8 sec
             if tick % 240 == 0 then
                 update_play_sound(e_audio_effect_type.telemetry_2_radar)
             end
-            -- long ping every 10
-            if tick % 300 == 0 then
+            -- long ping every 4
+            if tick % 120 == 0 then
                 update_play_sound(e_audio_effect_type.telemetry_1_radar)
             end
         end
@@ -267,14 +267,16 @@ function GameBreakout:update(screen_w, screen_h, ticks)
     end
 
     if self.ball_x < 0 or self.ball_x > screen_w - self.mx * 2 then
-        self.ball_dx = self.ball_dx * -1
+        local absorb = -1
+        self.ball_dx = self.ball_dx * absorb
+
         beep()
     --elseif self.ball_x > screen_w then
       --  self.ball_dx =  self.ball_dx * -1
     end
 
     if self.ball_y < 1 then
-        self.ball_dx = self.ball_dx + math.random(0, 1)
+        self.ball_dx = self.ball_dx + math.random(-2, 2)
         self.ball_y = 1
         self.ball_dy = self.ball_dy * -0.9
         self.ball_dx = self.ball_dx * 0.9
