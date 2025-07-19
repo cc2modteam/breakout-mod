@@ -24,7 +24,7 @@ function GameBreakout:new()
     self.mx = 10
     self.my = 10
     self:reset()
-    self.demo_started = false
+    self.demo_started = 0
     self.demo_objects = {}
 
     self.start_demo = function(self)
@@ -64,10 +64,35 @@ function GameBreakout:new()
                 )
             end
         end
-        self.demo_started = true
+        self.demo_started = update_get_logic_tick()
+    end
+
+    self.update_music = function(self, tick)
+              -- music
+        -- beats
+        -- every 0.5 sec
+        if tick % 15 == 0 then
+            update_play_sound(e_audio_effect_type.telemetry_4)
+        end
+        -- after first few sec
+        if tick - self.demo_started > 300 then
+            -- double tap every 2 sec
+            if tick % 60 == 0 then
+                update_play_sound(e_audio_effect_type.telemetry_6)
+            end
+            -- ping every 8 sec
+            if tick % 240 == 0 then
+                update_play_sound(e_audio_effect_type.telemetry_2_radar)
+            end
+            -- long ping every 10
+            if tick % 300 == 0 then
+                update_play_sound(e_audio_effect_type.telemetry_1_radar)
+            end
+        end
     end
 
     self.update_demo = function(self, tick)
+        -- text sprites
         self:update_moveables(self.demo_objects,
                 function(i, obj)
                     -- do bounces
@@ -90,8 +115,6 @@ function GameBreakout:new()
                             obj.vy = -1 * obj.vy
                         end
                     end
-
-
 
                     local q = 5 - (tick % 10)
                     obj.vy = obj.vy + math.sin(q / 50)
@@ -215,10 +238,9 @@ function GameBreakout:update(screen_w, screen_h, ticks)
 
     self.screen_w = screen_w - self.mx * 2
     self.screen_h = screen_h - self.my * 2
-    if not self.demo_started then
+    if self.demo_started == 0 then
         self:start_demo()
     end
-    self:update_demo(tick)
 
     if self.remaining <= 0 then
         score = self.score
@@ -340,6 +362,10 @@ function GameBreakout:update(screen_w, screen_h, ticks)
             end
         end
     end
+
+    self:update_demo(tick)
+    self:update_music(tick)
+
 end
 
 g_apps["breakout"] = GameBreakout:new()
