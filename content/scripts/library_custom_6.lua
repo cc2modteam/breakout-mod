@@ -366,7 +366,8 @@ function GameBreakout:update(screen_w, screen_h, ticks)
     end
 
     self:update_demo(tick)
-    self:update_music(tick)
+    -- the music is awful, just nope
+    -- self:update_music(tick)
 
 end
 
@@ -671,3 +672,79 @@ function Sounds:new()
 end
 
 g_apps["soundboard"] = Sounds:new()
+
+local TheMatrix = extend(AppBase)
+function TheMatrix:new()
+    local self = setmetatable({}, {__index = TheMatrix})
+    self.name = "The Matrix"
+    self.streams = {}
+
+    self.begin = function(this)
+        math.randomseed(update_get_time_since_epoch())
+        while #self.streams < 50 do
+            self:new_stream()
+        end
+    end
+
+    self.update = function(this, w, h, t)
+        self.screen_w = w
+        self.screen_h = h
+        self.green = color8(45, 255, 52, 255)
+        if #self.streams == 0 then
+            self:begin()
+        end
+        self:update_moveables(self.streams)
+        for _, stream in pairs(self.streams) do
+            -- add a random letter to each stream
+            -- that has advanced one letter
+            if stream.y > stream.value.next_char then
+                -- add a random letter
+                stream.value.text = stream.value.text .. string.char(math.random(65, 95)):lower()
+                stream.value.next_char = stream.value.next_char + 8
+                if string.len(stream.value.text) > self.screen_h / 4 then
+                    stream.value.text = ""
+                    stream.value.next_char = 0
+                    stream.y = math.floor(math.random(10, 45)) * -1
+                    stream.z = math.floor(math.random(0, 12))
+                    stream.x = math.floor(math.random(-2, self.screen_w + 2))
+                end
+            end
+
+            -- draw the stream, starting at the bottom and going up
+            local reverse = string.reverse(stream.value.text)
+            for i = 1, #reverse do
+                local c = reverse:sub(i,i)
+                local a = math.floor(math.max(self.green:a() - (i * 8) - (stream.z) , 0))
+                if a > 0 then
+                    local col
+                    if i > 1 then
+                        col = color8(self.green:r(), self.green:g(), self.green:b(), a)
+                    else
+                        col = color_white
+                    end
+
+                    update_ui_text(stream.x, stream.y - (i * 8), c, 10, 0, col, 2)
+                end
+            end
+        end
+    end
+
+    self.new_stream = function(this)
+        local stream = Moveable:new({
+            x = math.floor(math.random(-2, self.screen_w + 2)),
+            y = math.floor(math.random(10, 25)) * -1,
+            vy = 0.5,
+            z = math.floor(math.random(0, 12)),
+            value = {
+                text = "",
+                next_char = 0,
+            }
+        })
+        stream.vy = 5 - stream.z
+
+        table.insert(self.streams, stream)
+    end
+    return self
+end
+
+g_apps["thematrix"] = TheMatrix:new()

@@ -105,6 +105,10 @@ end
 function App:input_event(a, b)
     if self.input_event_func then
         self.input_event_func(a, b)
+    else
+        if b == e_input_action.press and a == e_input.back then
+            update_set_screen_state_exit()
+        end
     end
 end
 
